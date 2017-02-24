@@ -13,7 +13,7 @@
         <VirtualHost *:82>
 
             # Common
-            ServerAdmin admin@rackster-server.ch
+	    ServerAdmin webmaster@<tmpl_var name='domain'>
             ServerName <tmpl_var name='domain'>
             <tmpl_if name='alias'>
                 <tmpl_var name='alias'>

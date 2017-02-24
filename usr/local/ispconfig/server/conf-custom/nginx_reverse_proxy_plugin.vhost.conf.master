@@ -13,7 +13,7 @@ server {
         listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:80;
     </tmpl_if>
 
-    server_name <tmpl_var name='domain'> <tmpl_if name='alias'><tmpl_var name='alias'></tmpl_if> <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'></tmpl_if> <tmpl_if name='ipv6_enabled'>[<tmpl_var name='ipv6_address'>]</tmpl_if>;
+    server_name <tmpl_var name='domain'> <tmpl_if name='alias'><tmpl_var name='alias'></tmpl_if>;
 
     root <tmpl_var name='web_document_root_www'>;
 
@@ -37,8 +37,10 @@ server {
     # leave commented out unless you know what it is doing
     #more_set_headers 'Strict-Transport-Security: max-age=15768000';
 
-    ssl_certificate <tmpl_var name='web_document_root_ssl'>/<tmpl_var name='ssl_domain'>.nginx.crt;
-    ssl_certificate_key <tmpl_var name='web_document_root_ssl'>/<tmpl_var name='ssl_domain'>.key;
+    #ssl_certificate <tmpl_var name='web_document_root_ssl'>/<tmpl_var name='ssl_domain'>.nginx.crt;
+    #ssl_certificate_key <tmpl_var name='web_document_root_ssl'>/<tmpl_var name='ssl_domain'>.key;
+    ssl_certificate <tmpl_var name='ssl_crt_file'>;
+    ssl_certificate_key <tmpl_var name='ssl_key_file'>;
     </tmpl_if>
 
     ######################################################################
@@ -65,6 +67,15 @@ server {
     # recommended but not manditory directive
     # leave commented out unless you know what it is doing
     # include /etc/nginx/locations.d/*.conf;
+    
+    # global restrictions
+    include /etc/nginx/restrictions.conf;
+
+    # static 
+    include /etc/nginx/static.conf;
+
+    # letsencrypt
+    include /etc/nginx/letsencrypt.conf;
 
     # alias to local error docs
     <tmpl_if name='errordocs'>
@@ -74,6 +85,21 @@ server {
     # default location
     location / {
         proxy_pass http://apache2;
+    }
+
+    # fix multiple robots by app
+    location = /robots.txt {
+	proxy_pass http://apache2;
+    }
+
+    location /stats/ {
+
+	index index.html index.php;
+	auth_basic "Members Only";
+	auth_basic_user_file /var/www/clients/client1/web1/web/stats/.htpasswd_stats;
+    }
+    location ^~ /awstats-icon {
+	alias /usr/share/awstats/icon;
     }
 
     ######################################################################
