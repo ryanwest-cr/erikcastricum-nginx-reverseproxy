@@ -2,6 +2,13 @@
 
 This plugin allows you to run Nginx in front of Apache2 as a reverse proxy on servers managed through the ISPConfig3 Control Panel.
 
+This is fork of https://github.com/Rackster/ispconfig3-nginx-reverse-proxy
+
+# Added features
+
+- local customization in nginx config
+- added letsencrypt support
+
 ## How it works
 
 In general, it just creates the Nginx vhost files for your sites.
