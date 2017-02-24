@@ -14,22 +14,35 @@ Afterwards, all requests to port 80 or 443 (default http(s) ports) are fetched b
 
 1. Change your listen address for httpd server in /etc/httpd/conf/httpd.conf
 
+	```
 	Listen 127.0.0.1:82
+	```
 
 2. Copy nginx extra config files
 
+	```
 	cp etc/nginx/conf.d/proxy.conf /etc/nginx/conf.d/
 	cp etc/nginx/conf.d/upstreams.conf /etc/nginx/conf.d/
+	```
 
 3. Copy ispconfig host config files
+
+	```
 	cp usr/local/ispconfig/server/conf-custom/nginx_reverse_proxy_plugin.vhost.conf.master /usr/local/ispconfig/server/conf-custom/
 	cp usr/local/ispconfig/server/conf-custom/vhost.conf.master /usr/local/ispconfig/server/conf-custom/
+	```
 
 4. Copy ispconfig plugin file
+
+	```
 	cp usr/local/ispconfig/server/plugins-available/nginx_reverse_proxy_plugin.inc.php /usr/local/ispconfig/server/plugins-available/
+	```
 
 5. Enable plugin via symlink
+
+	```
 	ln -s /usr/local/ispconfig/server/plugins-available/nginx_reverse_proxy_plugin.inc.php /usr/local/ispconfig/server/plugins-enabled/nginx_reverse_proxy_plugin.inc.php
+	```
 
 ## Contribution
 
