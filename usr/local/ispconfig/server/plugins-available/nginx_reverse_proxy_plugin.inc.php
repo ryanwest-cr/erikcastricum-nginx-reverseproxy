@@ -131,7 +131,7 @@ class nginx_reverse_proxy_plugin {
 		global $app, $conf;
 
 		//* $VAR: command to run after vhost insert/update/delete
-		$final_command = '/etc/init.d/nginx reload';
+		$final_command = 'service nginx reload';
 
 		if ($this->action != 'insert') {
 			$this->action = 'update';
@@ -310,12 +310,42 @@ class nginx_reverse_proxy_plugin {
 			$crt_file = escapeshellcmd($data['new']['document_root'] .'/ssl/'. $data['new']['ssl_domain'] .'.crt');
 			$key_file = escapeshellcmd($data['new']['document_root'] .'/ssl/'. $data['new']['ssl_domain'] .'.key');
 
+			$tpl->setVar('ssl_letsencrypt', "n");
+			
+			if($data['new']['ssl'] == 'y' && $data['new']['ssl_letsencrypt'] == 'y') {
+				$app->log('found letsencrypt options on', LOGLEVEL_DEBUG);
+				$domain = $data['new']['domain'];
+				if(substr($domain, 0, 2) === '*.') {
+					// wildcard domain not yet supported by letsencrypt!
+					$app->log('Wildcard domains not yet supported by letsencrypt, so changing ' . $domain . ' to ' . substr($domain, 2), LOGLEVEL_WARN);
+					$domain = substr($domain, 2);
+				}
+				
+				$data['new']['ssl_domain'] = $domain;
+				$vhost_data['ssl_domain'] = $domain;
+				$ssl_dir = $data['new']['document_root'].'/ssl';
+
+				$key_file = $ssl_dir.'/'.$domain.'-le.key';
+				$key_file2 = $ssl_dir.'/'.$domain.'-le.key.org';
+				$crt_file = $ssl_dir.'/'.$domain.'-le.nginx.crt';
+				$bundle_file = $ssl_dir.'/'.$domain.'-le.bundle';
+				$crt_full_file = "/etc/letsencrypt/live/".$domain."/fullchain.pem";
+				if($web_config["website_symlinks_rel"] == 'y') {
+					$this->create_relative_link(escapeshellcmd($crt_full_file), escapeshellcmd($crt_file));
+				} else {
+					exec("ln -s ".escapeshellcmd($crt_full_file)." ".escapeshellcmd($crt_file));
+				}
+			}
+
+			$vhost_data['ssl_crt_file'] = $crt_file;
+			$vhost_data['ssl_key_file'] = $key_file;
+			$vhost_data['ssl_bundle_file'] = $bundle_file;
+
 			if ($data['new']['ssl_domain'] != '' && $data['new']['ssl'] == 'y' && is_file($crt_file) && is_file($key_file) && (filesize($crt_file) > 0) && (filesize($key_file) > 0)) {
 				$http_to_https = 1;
 			} else {
 				$http_to_https = 0;
 			}
-
 			// non-ssl vhost loop
 			if (count($rewrite_rules) > 0) {
 				$vhosts[] = array(
