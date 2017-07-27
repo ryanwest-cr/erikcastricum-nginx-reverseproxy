@@ -6,8 +6,8 @@ server {
     ######################################################################
 
     <tmpl_if name='ssl_enabled'>
-        listen <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'>:</tmpl_if>443 ssl spdy;
-        listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:443 ssl spdy;
+        listen <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'>:</tmpl_if>443 ssl http2;
+        listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:443 ssl http2;
     </tmpl_else>
         listen <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'>:</tmpl_if>80;
         listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:80;
@@ -41,6 +41,8 @@ server {
     #ssl_certificate_key <tmpl_var name='web_document_root_ssl'>/<tmpl_var name='ssl_domain'>.key;
     ssl_certificate <tmpl_var name='ssl_crt_file'>;
     ssl_certificate_key <tmpl_var name='ssl_key_file'>;
+
+    include /etc/nginx/ssl_settings.conf;
     </tmpl_if>
 
     ######################################################################
@@ -85,11 +87,18 @@ server {
     # default location
     location / {
         proxy_pass http://apache2;
+
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection $connection_upgrade;
+
+	include /etc/nginx/proxy_params.conf;
     }
 
     # fix multiple robots by app
     location = /robots.txt {
 	proxy_pass http://apache2;
+
+	include /etc/nginx/proxy_params.conf;
     }
 
     location /stats/ {
@@ -98,6 +107,7 @@ server {
 	auth_basic "Members Only";
 	auth_basic_user_file /var/www/clients/client1/web1/web/stats/.htpasswd_stats;
     }
+
     location ^~ /awstats-icon {
 	alias /usr/share/awstats/icon;
     }
@@ -106,7 +116,9 @@ server {
     ## Directives configuration
     ######################################################################
 
-    <tmpl_var name='nginx_directives'>
+    <tmpl_loop name="nginx_directives">
+        <tmpl_var name='nginx_directive'>
+    </tmpl_loop>
 
 }
 </tmpl_loop>
