@@ -1,7 +1,6 @@
 <tmpl_hook name='apache2_vhost:header'>
 
 <Directory {tmpl_var name='web_basedir'}/{tmpl_var name='domain'}>
-		DirectoryIndex index.php index.html
 		AllowOverride None
 		<tmpl_if name='apache_version' op='>' value='2.2' format='version'>
 		Require all denied
@@ -13,7 +12,22 @@
 
 <tmpl_loop name='vhosts'>
 <tmpl_if name='port' op='==' value='80'>
-	<VirtualHost {tmpl_var name='ip_address'}:82>
+<VirtualHost {tmpl_var name='ip_address'}:82>
+</tmpl_if>
+<tmpl_if name='port' op='==' value='443'>
+<VirtualHost {tmpl_var name='ip_address'}:444>
+</tmpl_if>
+<tmpl_if name='use_proxy_protocol' op='==' value='y'>
+<tmpl_if name='apache_version' op='>=' value='2.4.30' format='version'>
+	<IfModule mod_remoteip.c>
+		RemoteIPProxyProtocol On
+	</IfModule>
+	</tmpl_else>
+	<IfModule mod_proxy_protocol.c>
+		ProxyProtocol On
+	</IfModule>
+</tmpl_if>
+</tmpl_if>
 
 <tmpl_hook name='apache2_vhost:vhost_header'>
 <tmpl_if name='php' op='==' value='suphp'>
@@ -40,7 +54,20 @@
 </tmpl_if>
 		ServerAdmin webmaster@<tmpl_var name='domain'>
 
+<tmpl_if name='ssl_enabled'>
+<tmpl_if name='enable_http2' op='==' value='y'>
+		Protocols h2 http/1.1
+		SSLProtocol All -SSLv2 -SSLv3
+		SSLCipherSuite 'EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA !RC4 !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS'
+</tmpl_if>
+</tmpl_if>
+
+<tmpl_if name='logging' op='==' value='anon'>
+		ErrorLog "|/usr/local/ispconfig/server/scripts/vlogger -e -n -P -t \"error.log\" /var/log/ispconfig/httpd/<tmpl_var name='domain'>"
+</tmpl_if>
+<tmpl_if name='logging' op='==' value='yes'>
 		ErrorLog /var/log/ispconfig/httpd/<tmpl_var name='domain'>/error.log
+</tmpl_if>
 
 <tmpl_if name='errordocs'>
 		Alias /error/ "<tmpl_var name='web_document_root_www'>/error/"
@@ -54,36 +81,36 @@
 		ErrorDocument 503 /error/503.html
 </tmpl_if>
 
-<tmpl_if name='ssl_enabled'>
 		<IfModule mod_ssl.c>
-		#SSLEngine on
-		#SSLProtocol All -SSLv2 -SSLv3
+<tmpl_if name='ssl_enabled'>
+		SSLEngine on
+		SSLProtocol All -SSLv2 -SSLv3
 		# SSLCipherSuite          ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
-		#SSLHonorCipherOrder     on
+		SSLHonorCipherOrder     on
 		# <IfModule mod_headers.c>
 		# Header always add Strict-Transport-Security "max-age=15768000"
 		# </IfModule>
-		#SSLCertificateFile <tmpl_var name='ssl_crt_file'>
-		#SSLCertificateKeyFile <tmpl_var name='ssl_key_file'>
+		SSLCertificateFile <tmpl_var name='ssl_crt_file'>
+		SSLCertificateKeyFile <tmpl_var name='ssl_key_file'>
+		<tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
+		SSLUseStapling on
+		SSLStaplingResponderTimeout 5
+		SSLStaplingReturnResponderErrors off
+		</tmpl_if>
 <tmpl_if name='has_bundle_cert'>
 		<tmpl_if name='apache_version' op='<' value='2.4.8' format='version'>
-		#SSLCertificateChainFile <tmpl_var name='ssl_bundle_file'>
+		SSLCertificateChainFile <tmpl_var name='ssl_bundle_file'>
 		</tmpl_if>
-		<tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
-		#SSLUseStapling on
-		#SSLStaplingResponderTimeout 5
-		#SSLStaplingReturnResponderErrors off
-		</tmpl_if>
+</tmpl_if>
 </tmpl_if>
 		</IfModule>
-</tmpl_if>
 
 		<Directory {tmpl_var name='web_document_root_www'}>
 				# Clear PHP settings of this website
 				<FilesMatch ".+\.ph(p[345]?|t|tml)$">
 						SetHandler None
 				</FilesMatch>
-				Options +FollowSymLinks
+				Options +SymlinksIfOwnerMatch
 				AllowOverride <tmpl_var name='allow_override'>
 				<tmpl_if name='apache_version' op='>' value='2.2' format='version'>
 				Require all granted
@@ -115,7 +142,7 @@
 				<FilesMatch ".+\.ph(p[345]?|t|tml)$">
 						SetHandler None
 				</FilesMatch>
-				Options +FollowSymLinks
+				Options +SymlinksIfOwnerMatch
 				AllowOverride <tmpl_var name='allow_override'>
 				<tmpl_if name='apache_version' op='>' value='2.2' format='version'>
 				Require all granted
@@ -192,12 +219,20 @@
 				PythonHandler mod_python.publisher
 				PythonDebug On
 			</Directory>
+			<Directory {tmpl_var name='web_document_root'}>
+				<FilesMatch "\.py$">
+					SetHandler mod_python
+				</FilesMatch>
+				PythonHandler mod_python.publisher
+				PythonDebug On
+			</Directory>
 		</IfModule>
 </tmpl_if>
 
 <tmpl_if name='cgi' op='==' value='y'>
 		# cgi enabled
 	<Directory {tmpl_var name='document_root'}/cgi-bin>
+			AllowOverride <tmpl_var name='allow_override'>
 			<tmpl_if name='apache_version' op='>' value='2.2' format='version'>
 			Require all granted
 			<tmpl_else>
@@ -212,9 +247,9 @@
 </tmpl_if>
 <tmpl_if name='suexec' op='==' value='y'>
 		# suexec enabled
-	<IfModule mod_suexec.c>
-		SuexecUserGroup <tmpl_var name='system_user'> <tmpl_var name='system_group'>
-	</IfModule>
+		<IfModule mod_suexec.c>
+			SuexecUserGroup <tmpl_var name='system_user'> <tmpl_var name='system_group'>
+		</IfModule>
 </tmpl_if>
 <tmpl_if name='php' op='==' value='mod'>
 		# mod_php enabled
@@ -225,12 +260,10 @@
 		php_admin_value sendmail_path "/usr/sbin/sendmail -t -i -fwebmaster@<tmpl_var name='domain'>"
 		php_admin_value upload_tmp_dir <tmpl_var name='document_root'>/tmp
 		php_admin_value session.save_path <tmpl_var name='document_root'>/tmp
-	<tmpl_if name='has_custom_php_ini'>
-		PHPIniDir <tmpl_var name='custom_php_ini_dir'>
-	</tmpl_if>
-	<tmpl_if name='security_level' op='==' value='20'>
+	# PHPIniDir <tmpl_var name='custom_php_ini_dir'>
+<tmpl_if name='security_level' op='==' value='20'>
 		php_admin_value open_basedir <tmpl_var name='php_open_basedir'>
-		</tmpl_if>
+</tmpl_if>
 </tmpl_if>
 <tmpl_if name='php' op='==' value='suphp'>
 		# suphp enabled
@@ -238,9 +271,9 @@
 		<IfModule mod_suphp.c>
 			suPHP_Engine on
 			# suPHP_UserGroup <tmpl_var name='system_user'> <tmpl_var name='system_group'>
-		<tmpl_if name='has_custom_php_ini'>
-			suPHP_ConfigPath <tmpl_var name='custom_php_ini_dir'>
-		</tmpl_if>
+<tmpl_if name='has_custom_php_ini'>
+	suPHP_ConfigPath <tmpl_var name='custom_php_ini_dir'>
+</tmpl_if>
 			<FilesMatch "\.php[345]?$">
 				SetHandler x-httpd-suphp
 			</FilesMatch>
@@ -250,16 +283,16 @@
 </tmpl_if>
 <tmpl_if name='php' op='==' value='cgi'>
 		# php as cgi enabled
-		ScriptAlias /php5-cgi <tmpl_var name='cgi_starter_path'><tmpl_var name='cgi_starter_script'>
-		Action php5-cgi /php5-cgi
+		ScriptAlias /php-cgi <tmpl_var name='cgi_starter_path'><tmpl_var name='cgi_starter_script'>
+		Action php-cgi /php-cgi
 		<Directory {tmpl_var name='web_document_root_www'}>
 			<FilesMatch "\.php[345]?$">
-				SetHandler php5-cgi
+				SetHandler php-cgi
 			</FilesMatch>
 		</Directory>
 		<Directory {tmpl_var name='web_document_root'}>
 			<FilesMatch "\.php[345]?$">
-				SetHandler php5-cgi
+				SetHandler php-cgi
 			</FilesMatch>
 		</Directory>
 		<Directory {tmpl_var name='cgi_starter_path'}>
@@ -344,47 +377,37 @@
 			    </Directory>
 				<Directory {tmpl_var name='web_document_root_www'}>
 					<FilesMatch "\.php[345]?$">
-                    <tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
-                            <If "-f %{DOCUMENT_ROOT} . '/' . %{REQUEST_URI}">
-                                SetHandler php5-fcgi
-                            </If>
-                    <tmpl_else>
-                            SetHandler php5-fcgi
-                    </tmpl_if>
+						SetHandler php-fcgi
 					</FilesMatch>
 				</Directory>
 				<Directory {tmpl_var name='web_document_root'}>
 					<FilesMatch "\.php[345]?$">
-                    <tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
-                            <If "-f %{DOCUMENT_ROOT} . '/' . %{REQUEST_URI}">
-                                SetHandler php5-fcgi
-                            </If>
-                    <tmpl_else>
-                            SetHandler php5-fcgi
-                    </tmpl_if>
+						SetHandler php-fcgi
 					</FilesMatch>
 				</Directory>
-                Action php5-fcgi /php5-fcgi virtual
-				Alias /php5-fcgi {tmpl_var name='document_root'}/cgi-bin/php5-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'}
+                Action php-fcgi /php-fcgi virtual
+				Alias /php-fcgi {tmpl_var name='document_root'}/cgi-bin/php-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'}
 <tmpl_if name='use_tcp'>
-                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/php5-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -host 127.0.0.1:<tmpl_var name='fpm_port'> -pass-header Authorization             
+                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/php-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -host 127.0.0.1:<tmpl_var name='fpm_port'> -pass-header Authorization  -pass-header Content-Type    
 </tmpl_if>
 <tmpl_if name='use_socket'>
-                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/php5-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -socket <tmpl_var name='fpm_socket'> -pass-header Authorization
+                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/php-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -socket <tmpl_var name='fpm_socket'> -pass-header Authorization  -pass-header Content-Type
 </tmpl_if>
 		</IfModule>
 		<IfModule mod_proxy_fcgi.c>
+<tmpl_if name='php_fpm_chroot' op='==' value='y'>
+			<IfVersion >= 2.4.26>
+				ProxyFCGISetEnvIf "true" DOCUMENT_ROOT "<tmpl_var name='php_fpm_chroot_web_folder'>"
+				ProxyFCGISetEnvIf "true" CONTEXT_DOCUMENT_ROOT "%{reqenv:DOCUMENT_ROOT}"
+				ProxyFCGISetEnvIf "true" HOME "%{reqenv:DOCUMENT_ROOT}"
+				ProxyFCGISetEnvIf "true" SCRIPT_FILENAME "%{reqenv:DOCUMENT_ROOT}%{reqenv:SCRIPT_NAME}"
+			</IfVersion>
+</tmpl_if>
 <tmpl_if name='use_tcp'>
 			#ProxyPassMatch ^/(.*\.php[345]?(/.*)?)$ fcgi://127.0.0.1:<tmpl_var name='fpm_port'><tmpl_var name='web_document_root'>/$1
 			<Directory {tmpl_var name='web_document_root'}>
 				<FilesMatch "\.php[345]?$">
-                    <tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
-                            <If "-f %{DOCUMENT_ROOT} . '/' . %{REQUEST_URI}">
-                                    SetHandler "proxy:fcgi://127.0.0.1:<tmpl_var name='fpm_port'>"
-                            </If>
-                    <tmpl_else>
-                            SetHandler "proxy:fcgi://127.0.0.1:<tmpl_var name='fpm_port'>"
-                    </tmpl_if>
+						SetHandler "proxy:fcgi://127.0.0.1:<tmpl_var name='fpm_port'>"
 				</FilesMatch>
 			</Directory>
 </tmpl_if>
@@ -392,13 +415,7 @@
 			#ProxyPassMatch ^/(.*\.php[345]?(/.*)?)$ unix://<tmpl_var name='fpm_socket'>|fcgi://localhost/<tmpl_var name='web_document_root'>/$1
 			<Directory {tmpl_var name='web_document_root'}>
 				<FilesMatch "\.php[345]?$">
-                    <tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
-                            <If "-f %{DOCUMENT_ROOT} . '/' . %{REQUEST_URI}">
-                                    SetHandler "proxy:unix:<tmpl_var name='fpm_socket'>|fcgi://localhost"
-                            </If>
-                    <tmpl_else>
-                            SetHandler "proxy:unix:<tmpl_var name='fpm_socket'>|fcgi://localhost"
-                    </tmpl_if>
+						SetHandler "proxy:unix:<tmpl_var name='fpm_socket'>|fcgi://localhost"
 				</FilesMatch>
 			</Directory>
 </tmpl_if>
@@ -433,7 +450,33 @@
 				</Directory>
                 Action hhvm-fcgi /hhvm-fcgi virtual
 				Alias /hhvm-fcgi {tmpl_var name='document_root'}/cgi-bin/hhvm-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'}
-                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/hhvm-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -socket /var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock -pass-header Authorization
+                FastCgiExternalServer {tmpl_var name='document_root'}/cgi-bin/hhvm-fcgi-{tmpl_var name='ip_address'}-{tmpl_var name='port'}-{tmpl_var name='domain'} -idle-timeout 300 -socket /var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock -pass-header Authorization  -pass-header Content-Type
+		</IfModule>
+		<IfModule mod_proxy_fcgi.c>
+			<Directory {tmpl_var name='document_root'}/cgi-bin>
+				<tmpl_if name='apache_version' op='>' value='2.2' format='version'>
+				Require all granted
+				<tmpl_else>
+				Order allow,deny
+				Allow from all
+				</tmpl_if>
+			</Directory>
+			<Directory {tmpl_var name='web_document_root'}>
+				<FilesMatch "\.php[345]?$">
+						SetHandler "proxy:unix:/var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock|fcgi://localhost"
+				</FilesMatch>
+				<FilesMatch "\.hh$">
+						SetHandler "proxy:unix:/var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock|fcgi://localhost"
+				</FilesMatch>
+			</Directory>
+			<Directory {tmpl_var name='web_document_root_www'}>
+				<FilesMatch "\.php[345]?$">
+						SetHandler "proxy:unix:/var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock|fcgi://localhost"
+				</FilesMatch>
+				<FilesMatch "\.hh$">
+						SetHandler "proxy:unix:/var/run/hhvm/hhvm.<tmpl_var name='system_user'>.sock|fcgi://localhost"
+				</FilesMatch>
+			</Directory>
 		</IfModule>
 </tmpl_if>
 
@@ -443,42 +486,43 @@
 		RewriteCond %{REQUEST_URI} ^/\.well-known/acme-challenge/
 		RewriteRule ^ - [END]
 </tmpl_if>
-<tmpl_if name='ssl_enabled'>
-<tmpl_else>
-<tmpl_if name='rewrite_to_https' op='==' value='y'>
-		#RewriteCond %{HTTPS} off
-		#<tmpl_if name='apache_version' op='<' value='2.4' format='version'>RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
-</tmpl_if>
-		#RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-</tmpl_if>
-</tmpl_if>
 <tmpl_if name='seo_redirect_enabled'>
 		RewriteCond %{HTTP_HOST} <tmpl_var name='seo_redirect_operator'>^<tmpl_var name='seo_redirect_origin_domain'>$ [NC]
 		<tmpl_if name='apache_version' op='<' value='2.4' format='version'>
 		RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
 		</tmpl_if>
-		RewriteRule ^ http<tmpl_if name='ssl_enabled'>s</tmpl_if>://<tmpl_var name='seo_redirect_target_domain'>%{REQUEST_URI} [R=301,NE,L]
+		RewriteRule ^(.*)$ http<tmpl_if name='ssl_enabled'>s</tmpl_if>://<tmpl_var name='seo_redirect_target_domain'>$1 [R=301,NE,L]
 </tmpl_if>
 <tmpl_loop name="alias_seo_redirects">
 		RewriteCond %{HTTP_HOST} <tmpl_var name='alias_seo_redirect_operator'>^<tmpl_var name='alias_seo_redirect_origin_domain'>$ [NC]
 		<tmpl_if name='apache_version' op='<' value='2.4' format='version'>
 		RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
 		</tmpl_if>
-		RewriteRule ^ http<tmpl_if name='ssl_enabled'>s</tmpl_if>://<tmpl_var name='alias_seo_redirect_target_domain'>%{REQUEST_URI} [R=301,NE,L]
+		RewriteRule ^(.*)$ http<tmpl_if name='ssl_enabled'>s</tmpl_if>://<tmpl_var name='alias_seo_redirect_target_domain'>$1 [R=301,NE,L]
 </tmpl_loop>
 <tmpl_loop name="redirects">
-		RewriteCond %{HTTP_HOST} <tmpl_var name='rewrite_domain'>$ [NC]
+		RewriteCond %{HTTP_HOST}   <tmpl_var name='rewrite_domain'>$ [NC]
 		<tmpl_if name='apache_version' op='<' value='2.4' format='version'>
 		RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
 		</tmpl_if>
 <tmpl_if name="rewrite_is_url" op="==" value="n">
 		RewriteCond %{REQUEST_URI} !^/webdav/
-		RewriteCond %{REQUEST_URI} !^/php5-fcgi/
+		RewriteCond %{REQUEST_URI} !^/php-fcgi/
 		RewriteCond %{REQUEST_URI} !^<tmpl_var name='rewrite_target'>
 </tmpl_if>
-		RewriteRule /(.*) <tmpl_var name='rewrite_target'><tmpl_if name="rewrite_add_path" op="==" value="y">$1</tmpl_if> <tmpl_var name='rewrite_type'>
+		
+		RewriteRule   ^/(.*)$ <tmpl_var name='rewrite_target'><tmpl_if name="rewrite_add_path" op="==" value="y">$1</tmpl_if>  <tmpl_var name='rewrite_type'>
 	
 </tmpl_loop>
+<tmpl_if name='ssl_enabled'>
+<tmpl_else>
+<tmpl_if name='rewrite_to_https' op='==' value='y'>
+        RewriteCond %{HTTPS} off
+        <tmpl_if name='apache_version' op='<' value='2.4' format='version'>RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+</tmpl_if>
+        RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+</tmpl_if>
+</tmpl_if>
 </tmpl_if>
 
 		# add support for apache mpm_itk
@@ -486,27 +530,45 @@
 			AssignUserId <tmpl_var name='system_user'> <tmpl_var name='system_group'>
 		</IfModule>
 
-	<IfModule mod_dav_fs.c>
-	<Location /webdav>
-		<IfModule mod_security2.c>
-		SecRuleRemoveById 960015
-		SecRuleRemoveById 960032
+		<IfModule mod_dav_fs.c>
+		# Do not execute PHP files in webdav directory
+			<Directory {tmpl_var name='document_root'}/webdav>
+				<ifModule mod_security2.c>
+					SecRuleRemoveById 960015
+					SecRuleRemoveById 960032
+				</ifModule>
+				<FilesMatch "\.ph(p3?|tml)$">
+					SetHandler None
+				</FilesMatch>
+			</Directory>
+			DavLockDB {tmpl_var name='document_root'}/tmp/DavLock
+			# DO NOT REMOVE THE COMMENTS!
+			# IF YOU REMOVE THEM, WEBDAV WILL NOT WORK ANYMORE!
+			# WEBDAV BEGIN
+			# WEBDAV END
 		</IfModule>
-		DirectoryIndex disabled
-		SetHandler None
-	</Location>
-	DavLockDB {tmpl_var name='document_root'}/tmp/DavLock
-	# needed by apache2_plugin.inc.php
-	# WEBDAV BEGIN
-	# WEBDAV END
-	</IfModule>
 
-<tmpl_var name='apache_directives'>
+<tmpl_if name='ssl_enabled'>
+	<tmpl_var name='apache_directives'>
+<tmpl_else>
+	<tmpl_if name='rewrite_to_https' op='==' value='y'>
+		# skipping apache_directives, as that will be handled by the ssl vhost
+	<tmpl_else>
+		<tmpl_var name='apache_directives'>
+	</tmpl_if>
+</tmpl_if>
+
 <tmpl_hook name='apache2_vhost:vhost_footer'>
 </VirtualHost>
+
+<tmpl_if name='apache_version' op='>=' value='2.4' format='version'>
+<tmpl_if name='ssl_enabled'>
+<IfModule mod_ssl.c>
+        SSLStaplingCache shmcb:/var/run/ocsp(128000)
+</IfModule>
+</tmpl_if>
 </tmpl_if>
 
 </tmpl_loop>
 
 <tmpl_hook name='apache2_vhost:footer'>
-
