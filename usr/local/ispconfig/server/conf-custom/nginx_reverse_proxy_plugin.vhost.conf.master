@@ -103,9 +103,9 @@ server {
 
     location /stats/ {
 
-	index index.html index.php;
-	auth_basic "Members Only";
-	auth_basic_user_file /var/www/clients/client1/web1/web/stats/.htpasswd_stats;
+    	index index.html index.php;
+    	auth_basic "Members Only";
+    	auth_basic_user_file <tmpl_var name='web_document_root'>/stats/.htpasswd_stats;
     }
 
     location ^~ /awstats-icon {
