@@ -330,7 +330,17 @@ class nginx_reverse_proxy_plugin {
 				$vhost_data['ssl_domain'] = $domain;
 				$ssl_dir = $data['new']['document_root'].'/ssl';
 
-				$key_file = $ssl_dir.'/'.$domain.'-le.key';
+				// Verify that the key file exists and link if not.
+				$key_file = $ssl_dir . '/' . $domain . '-le.key';
+				if (file_exists($ssl_dir . '/' . $domain . '-le.key')) {
+				} elseif (!file_exists($ssl_dir . '/' . $domain . '-le.key') && file_exists('/etc/letsencrypt/live/'. $domain.'/privkey.pem')) {
+					if ($web_config["website_symlinks_rel"] == 'y') {
+						$this->create_relative_link(escapeshellcmd('/etc/letsencrypt/live/' . $domain . '/privkey.pem'), escapeshellcmd($key_file));
+					} else {
+						exec("ln -s " . escapeshellcmd('/etc/letsencrypt/live/' . $domain . '/privkey.pem') . " " . escapeshellcmd($key_file));
+					}
+				}
+
 				$key_file2 = $ssl_dir.'/'.$domain.'-le.key.org';
 				$crt_file = $ssl_dir.'/'.$domain.'-le.nginx.crt';
 				$bundle_file = $ssl_dir.'/'.$domain.'-le.bundle';
