@@ -339,6 +339,8 @@ class nginx_reverse_proxy_plugin {
 					} else {
 						exec("ln -s " . escapeshellcmd('/etc/letsencrypt/live/' . $domain . '/privkey.pem') . " " . escapeshellcmd($key_file));
 					}
+				} else {
+					$app->log('Unable to find SSL keyfile for ' . $suffix . ', are you sure certificate has been created?', LOGLEVEL_WARN);
 				}
 
 				$key_file2 = $ssl_dir.'/'.$domain.'-le.key.org';
