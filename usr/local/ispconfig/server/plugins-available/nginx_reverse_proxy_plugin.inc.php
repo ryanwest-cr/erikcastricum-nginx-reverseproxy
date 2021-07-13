@@ -99,8 +99,10 @@ class nginx_reverse_proxy_plugin {
 
 		if ($data['new']['ssl_action'] == 'del') {
 			$this->cert_helper('delete', $data);
+			$app->log('Going to delete ssl configuration', LOGLEVEL_DEBUG);
 		} else {
 			$this->cert_helper('update', $data);
+			$app->log('Going to create or update ssl configuration.', LOGLEVEL_DEBUG);
 		}
 	}
 
@@ -158,6 +160,7 @@ class nginx_reverse_proxy_plugin {
 
 			if($subdomain_host == '') {
 				$subdomain_host = 'web'.$data['new']['domain_id'];
+				$app->log('Dealing with subdomain host' . $subdomain_host . '.', LOGLEVEL_DEBUG);
 			}
 
 			$web_folder = $data['new']['web_folder'];
@@ -166,9 +169,14 @@ class nginx_reverse_proxy_plugin {
 
 		$vhost_data = $data['new'];
 		$vhost_data['web_document_root'] = $data['new']['document_root'].'/'.$web_folder;
+		$app->log('Web document root is ' . $vhost_data['web_document_root'], LOGLEVEL_DEBUG);
 		$vhost_data['web_document_root_www'] = $web_config['website_basedir'].'/'.$data['new']['domain'].'/'.$web_folder;
+		$app->log('Web document root (www) is ' . $vhost_data['web_document_root_www'], LOGLEVEL_DEBUG);
 		$vhost_data['web_basedir'] = $web_config['website_basedir'];
+		$app->log('Web base dir is ' . $vhost_data['web_basedir'], LOGLEVEL_DEBUG);
 		$vhost_data['ssl_domain'] = $data['new']['ssl_domain'];
+		$app->log('SSL domain is ' . $vhost_data['ssl_domain'], LOGLEVEL_DEBUG);
+
 
 		/* __ VHOST & VHOSTSUBDOMAIN - section for vhosts and vhostsubdomains //////////////*/
 		if ($data['new']['type'] == 'vhost' || $data['new']['type'] == 'vhostsubdomain') {
@@ -182,9 +190,12 @@ class nginx_reverse_proxy_plugin {
 					// if seo-redirect is enabled, this should be placed in separate server block
 					// to prevent if statement in server/request!
 					$server_alias[] .= 'www.'. $data['new']['domain'] .' ';
+					$app->log('Dealing with www serveralias', LOGLEVEL_DEBUG);
 				break;
 				case '*':
 					$server_alias[] .= '*.'. $data['new']['domain'] .' ';
+					$app->log('Server alias is NOT www.', LOGLEVEL_DEBUG);
+
 				break;
 			}
 
@@ -327,8 +338,11 @@ class nginx_reverse_proxy_plugin {
 				}
 				
 				$data['new']['ssl_domain'] = $domain;
+				$app->log('LE: SSL domain is ' . $data['new']['ssl_domain'], LOGLEVEL_DEBUG);
+
 				$vhost_data['ssl_domain'] = $domain;
 				$ssl_dir = $data['new']['document_root'].'/ssl';
+				$app->log('LE: SSL directory is ' . $ssl_dir, LOGLEVEL_DEBUG);
 
 				// Verify that the key file exists and link if not.
 				$key_file = $ssl_dir . '/' . $domain . '-le.key';
@@ -349,17 +363,20 @@ class nginx_reverse_proxy_plugin {
 				$crt_full_file = "/etc/letsencrypt/live/".$domain."/fullchain.pem";
 				if($web_config["website_symlinks_rel"] == 'y') {
 					$this->create_relative_link(escapeshellcmd($crt_full_file), escapeshellcmd($crt_file));
+					$app->log("Created relative link from $crt_full_file to $crt_file", LOGLEVEL_DEBUG);
 				} else {
 					exec("ln -s ".escapeshellcmd($crt_full_file)." ".escapeshellcmd($crt_file));
+					$app->log("Created non-relative symbol link from $crt_full_file to $crt_file", LOGLEVEL_DEBUG);
 				}
 			}
 
 			$vhost_data['ssl_crt_file'] = $crt_file;
 			$vhost_data['ssl_key_file'] = $key_file;
 			$vhost_data['ssl_bundle_file'] = $bundle_file;
-
+			
 			if ($data['new']['ssl_domain'] != '' && $data['new']['ssl'] == 'y' && is_file($crt_file) && is_file($key_file) && (filesize($crt_file) > 0) && (filesize($key_file) > 0)) {
 				$http_to_https = 1;
+				$app->log("http to https is on", LOGLEVEL_DEBUG);
 			} else {
 				$http_to_https = 0;
 			}
@@ -710,14 +727,20 @@ class nginx_reverse_proxy_plugin {
 
 		if (is_file($data['cert']['crt'])) {
 			$data['cert']['crt_check'] = 1;
+		} else {
+			$app->log($data['cert']['crt'] . ' not found.', LOGLEVEL_DEBUG);
 		}
 
 		if (is_file($data['cert'][$suffix .'_crt'])) {
 			$data['cert'][$suffix .'_crt_check'] = 1;
+		} else {
+			$app->log($data['cert'][$suffix . '_crt'] . ' not found.', LOGLEVEL_DEBUG);
 		}
 
 		if (is_file($data['cert']['bundle'])) {
 			$data['cert']['bundle_check'] = 1;
+		} else {
+			$app->log($data['cert']['bundle'] . ' not found.', LOGLEVEL_DEBUG);
 		}
 
 		return $data['cert'] = call_user_func(
