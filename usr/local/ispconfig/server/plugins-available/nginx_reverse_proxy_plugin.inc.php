@@ -750,7 +750,7 @@ class nginx_reverse_proxy_plugin {
 				$app->log('Copying ssl cert file: '. $data['cert'][$suffix .'_crt'], LOGLEVEL_DEBUG);
 			}
 		} else {
-			$app->log('Creating '. $suffix .' ssl files failed', LOGLEVEL_DEBUG);
+			$app->log('Creating '. $suffix .' ssl files failed', LOGLEVEL_WARN);
 		}
 	}
 
