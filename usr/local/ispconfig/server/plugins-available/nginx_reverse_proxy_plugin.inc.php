@@ -8,6 +8,11 @@
  *
  * @author Rackster Internet Services <open-source@rackster.ch>
  * @link   https://open-source.rackster.ch/project/ispconfig3-nginx-reverse-proxy-plugin
+ * 
+ * @author Modifications by Tuomas Liinamaa <tuomas@tuomas.fun>
+ * @link   https://tuomas.fun
+ * @license Original licence not defined, modifications licensed under AGPL
+ * 
  */
 class nginx_reverse_proxy_plugin {
 
