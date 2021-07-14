@@ -7,10 +7,10 @@ server {
 
     <tmpl_if name='ssl_enabled'>
         listen <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'>:</tmpl_if>443 ssl http2;
-        listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:443 ssl http2;
+        <tmpl_if name='ipv6_enabled'>listen <tmpl_var name='ipv6_address'>]:443 ssl http2;</tmpl_if>
     </tmpl_else>
         listen <tmpl_if name='ip_address' op='!=' value='*'><tmpl_var name='ip_address'>:</tmpl_if>80;
-        listen [<tmpl_if name='ipv6_enabled'><tmpl_var name='ipv6_address'></tmpl_else>::</tmpl_if>]:80;
+        <tmpl_if name='ipv6_enabled'>listen <tmpl_var name='ipv6_address'>]:80;</tmpl_if>
     </tmpl_if>
 
     server_name <tmpl_var name='domain'> <tmpl_if name='alias'><tmpl_var name='alias'></tmpl_if>;
