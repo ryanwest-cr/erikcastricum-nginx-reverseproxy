@@ -28,8 +28,8 @@ Afterwards, all requests to port 80 or 443 (default http(s) ports) are fetched b
 2. Copy nginx extra config files
 
 	```
-	cp etc/nginx/conf.d/proxy.conf /etc/nginx/conf.d/
-	cp etc/nginx/conf.d/upstreams.conf /etc/nginx/conf.d/
+	cp -r etc/nginx/* /etc/nginx/
+
 	```
 
 3. Copy ispconfig host config files
@@ -49,6 +49,14 @@ Afterwards, all requests to port 80 or 443 (default http(s) ports) are fetched b
 
 	```
 	ln -s /usr/local/ispconfig/server/plugins-available/nginx_reverse_proxy_plugin.inc.php /usr/local/ispconfig/server/plugins-enabled/nginx_reverse_proxy_plugin.inc.php
+	```
+
+6. Fix the portnumber in '/usr/local/ispconfig/server/plugins-available/apps_vhost_plugin.inc.php'
+
+	```
+	vi /usr/local/ispconfig/server/plugins-available/apps_vhost_plugin.inc.php
+	find the line if($web_config['server_type'] == 'nginx')
+	change the portnumber 8081 into an unused portnumber
 	```
 
 ## Contribution
